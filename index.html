@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense & Card Manager with Gemini AI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel File Import (.xlsx, .xls, .csv) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        sparkle: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen pb-12">
+
+    <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/80 pb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-primary-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-primary-500/20">
+                    <i class="fa-solid fa-indian-rupee-sign text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Expense Manager</h1>
+                        <span class="px-2.5 py-0.5 bg-sparkle-100 text-sparkle-700 text-xs font-bold rounded-full flex items-center gap-1 border border-sparkle-200">
+                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Gemini AI
+                        </span>
+                    </div>
+                    <p class="text-sm text-slate-500 font-medium">Smart expense tracking, credit cards & Gemini financial intelligence</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Month Filter Dropdown -->
+                <div class="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm">
+                    <i class="fa-regular fa-calendar-days text-primary-600 text-xs sm:text-sm"></i>
+                    <select id="globalMonthFilter" onchange="handleMonthFilterChange(this.value)" class="text-xs sm:text-sm font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                    </select>
+                </div>
+                <!-- Edit Names Button -->
+                <button onclick="openManageNamesModal()" class="px-3 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs sm:text-sm transition shadow-sm flex items-center gap-2" title="Edit member & payer names">
+                    <i class="fa-solid fa-user-pen text-primary-600"></i> Edit Names
+                </button>
+                <button onclick="generateAudioSummary()" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-xs sm:text-sm transition shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-volume-high text-sparkle-400"></i> AI Briefing
+                </button>
+                <button onclick="openExcelImportModal()" class="px-3 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs sm:text-sm transition shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-600"></i> Import Excel
+                </button>
+                <button onclick="exportToCSV()" class="px-3 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs sm:text-sm transition shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-download text-slate-400"></i> Export CSV
+                </button>
+                <button onclick="scrollToAddExpense()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium text-xs sm:text-sm transition shadow-md shadow-primary-500/20 flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Add Expense
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div id="audioBriefingBanner" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 hidden">
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-4 text-white shadow-xl border border-indigo-500/30 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-sparkle-600/30 border border-sparkle-400/30 flex items-center justify-center text-sparkle-300">
+                    <i class="fa-solid fa-headphones text-lg animate-pulse"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm flex items-center gap-2 text-indigo-100">
+                        <span>Gemini Audio Monthly Financial Summary</span>
+                        <span id="audioStatusBadge" class="text-[10px] bg-indigo-500/30 px-2 py-0.5 rounded text-indigo-300">Ready</span>
+                    </h4>
+                    <p id="audioTranscriptText" class="text-xs text-indigo-200/80 line-clamp-1 mt-0.5">Click Play to generate a spoken overview of your current monthly spending and credit card due alerts.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <audio id="geminiAudioPlayer" class="hidden" controls></audio>
+                <button id="playAudioBtn" onclick="toggleAudioPlayback()" class="px-4 py-2 bg-sparkle-600 hover:bg-sparkle-500 text-white rounded-xl font-semibold text-xs transition flex items-center gap-2">
+                    <i class="fa-solid fa-play" id="playAudioIcon"></i> <span id="playAudioLabel">Generate & Play</span>
+                </button>
+                <button onclick="closeAudioBanner()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Spent This Month -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <p class="text-xs font-medium text-slate-400">Spent this month</p>
+                <h3 id="statSpent" class="text-2xl font-bold text-slate-900 mt-1">₹0</h3>
+            </div>
+            <!-- Total Transactions -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <p class="text-xs font-medium text-slate-400">Transactions</p>
+                <h3 id="statTxnCount" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+            </div>
+            <!-- Split Balance Summary Header -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <p id="statPayersLabel" class="text-xs font-medium text-slate-400">Sunny / Pandu Paid</p>
+                    <button onclick="openManageNamesModal()" class="text-[10px] text-primary-600 hover:underline" title="Change names">
+                        <i class="fa-solid fa-pen text-[10px]"></i>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between mt-1">
+                    <span id="statSunnyPaid" class="text-sm font-bold text-primary-600">S: ₹0</span>
+                    <span class="text-slate-300">|</span>
+                    <span id="statPanduPaid" class="text-sm font-bold text-emerald-600">P: ₹0</span>
+                </div>
+            </div>
+            <!-- Split Balance Net Owed -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <p class="text-xs font-medium text-slate-400">Net Settlement Status</p>
+                <h3 id="statSettlement" class="text-sm font-bold text-slate-800 mt-2 truncate">Balanced</h3>
+            </div>
+            <!-- Card Due Summary -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <p class="text-xs font-medium text-slate-400">Total Cards Due</p>
+                <h3 id="statCardDue" class="text-2xl font-bold text-amber-600 mt-1">₹0</h3>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- LEFT COLUMN (Span 8) -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- Monthly Spending Chart -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Monthly spending chart</h2>
+                            <p class="text-xs text-slate-400">Breakdown by 5-day periods</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="changeMonth(-1)" class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition text-xs">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span id="currentMonthLabel" class="text-sm font-bold text-slate-800 min-w-[120px] text-center">September 2026</span>
+                            <button onclick="changeMonth(1)" class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition text-xs">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chart Bars Container -->
+                    <div class="h-44 flex items-end justify-between gap-2 pt-6 px-2">
+                        <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <span id="chartVal1" class="text-[10px] font-semibold text-slate-400 group-hover:text-primary-600">₹0</span>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex items-end">
+                                <div id="chartBar1" class="w-full bg-primary-500 rounded-full transition-all duration-500" style="height: 5%"></div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-400">1-5</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <span id="chartVal2" class="text-[10px] font-semibold text-slate-400 group-hover:text-primary-600">₹0</span>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex items-end">
+                                <div id="chartBar2" class="w-full bg-primary-500 rounded-full transition-all duration-500" style="height: 5%"></div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-400">6-10</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <span id="chartVal3" class="text-[10px] font-semibold text-slate-400 group-hover:text-primary-600">₹0</span>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex items-end">
+                                <div id="chartBar3" class="w-full bg-primary-500 rounded-full transition-all duration-500" style="height: 5%"></div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-400">11-15</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <span id="chartVal4" class="text-[10px] font-semibold text-slate-400 group-hover:text-primary-600">₹0</span>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex items-end">
+                                <div id="chartBar4" class="w-full bg-primary-500 rounded-full transition-all duration-500" style="height: 5%"></div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-400">16-20</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <span id="chartVal5" class="text-[10px] font-semibold text-slate-400 group-hover:text-primary-600">₹0</span>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex items-end">
+                                <div id="chartBar5" class="w-full bg-primary-500 rounded-full transition-all duration-500" style="height: 5%"></div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-400">21-25</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <span id="chartVal6" class="text-[10px] font-semibold text-slate-400 group-hover:text-primary-600">₹0</span>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex items-end">
+                                <div id="chartBar6" class="w-full bg-primary-500 rounded-full transition-all duration-500" style="height: 5%"></div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-400">26-30</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <span id="chartVal7" class="text-[10px] font-semibold text-slate-400 group-hover:text-primary-600">₹0</span>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex items-end">
+                                <div id="chartBar7" class="w-full bg-primary-500 rounded-full transition-all duration-500" style="height: 5%"></div>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-400">31</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex border-b border-slate-200 gap-6 text-sm font-semibold pt-2 overflow-x-auto">
+                    <button id="viewTabExpenses" onclick="setActiveView('expenses')" class="pb-3 border-b-2 border-primary-600 text-primary-600 flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-list-ul"></i> Expenses List
+                    </button>
+                    <button id="viewTabMom" onclick="setActiveView('mom')" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-chart-column"></i> Month-on-Month Breakdown
+                    </button>
+                    <button id="viewTabCards" onclick="setActiveView('cards')" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-regular fa-credit-card"></i> Cards Tracker
+                    </button>
+                    <button id="viewTabAi" onclick="setActiveView('ai')" class="pb-3 border-b-2 border-transparent text-sparkle-600 hover:text-sparkle-700 flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Financial Advisor
+                    </button>
+                </div>
+
+                <div id="expensesView" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900" id="expensesTableTitle">Recent expenses</h2>
+                            <p class="text-xs text-slate-400" id="expensesTableSubtitle">Showing expenses for selected period</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearAllExpenses()" class="px-4 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition">
+                                Clear all
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead>
+                                <tr class="text-slate-400 font-medium border-b border-slate-100">
+                                    <th class="py-3 px-2">Date</th>
+                                    <th class="py-3 px-2">Category</th>
+                                    <th class="py-3 px-2">Payment Mode</th>
+                                    <th id="thPerson1" class="py-3 px-2 text-right">Sunny</th>
+                                    <th id="thPerson2" class="py-3 px-2 text-right">Pandu</th>
+                                    <th class="py-3 px-2 text-right">Total</th>
+                                    <th class="py-3 px-2">Remarks</th>
+                                    <th class="py-3 px-2 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseTableBody" class="divide-y divide-slate-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="momView" class="hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-calendar-week text-primary-600"></i> Month-on-Month Separate Ledgers
+                                </h2>
+                                <p class="text-xs text-slate-500">Historical summary separated month by month</p>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="text-slate-400 font-medium border-b border-slate-100">
+                                        <th class="py-3 px-2">Month</th>
+                                        <th class="py-3 px-2 text-center">Txn Count</th>
+                                        <th id="thMomPerson1" class="py-3 px-2 text-right">Sunny Paid</th>
+                                        <th id="thMomPerson2" class="py-3 px-2 text-right">Pandu Paid</th>
+                                        <th class="py-3 px-2 text-right">Total Spent</th>
+                                        <th class="py-3 px-2 text-right">Top Category</th>
+                                        <th class="py-3 px-2 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="momSummaryBody" class="divide-y divide-slate-100">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cardsView" class="hidden space-y-6">
+                    <!-- Dynamic Card Owner Sections Container -->
+                    <div id="cardsContainer" class="space-y-6">
+                    </div>
+                </div>
+
+                <div id="aiView" class="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-sparkles text-sparkle-600"></i> Gemini AI Financial Intelligence
+                            </h2>
+                            <p class="text-xs text-slate-500">Ask questions, audit credit card strategy, or calculate split settlements.</p>
+                        </div>
+                        <button onclick="runAiAudit()" class="px-4 py-2 bg-sparkle-600 hover:bg-sparkle-700 text-white font-semibold text-xs rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-arrows-rotate"></i> Comprehensive Audit
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <button onclick="sendQuickAiQuery('Calculate exact settlement balance between members and who owes what.')" class="px-3 py-1.5 bg-slate-100 hover:bg-sparkle-50 hover:text-sparkle-700 rounded-lg text-slate-600 transition border border-slate-200">
+                            ⚖️ Calculate Settlement
+                        </button>
+                        <button onclick="sendQuickAiQuery('Which credit card bills should be paid first based on due dates and limits?')" class="px-3 py-1.5 bg-slate-100 hover:bg-sparkle-50 hover:text-sparkle-700 rounded-lg text-slate-600 transition border border-slate-200">
+                            💳 Credit Card Payment Strategy
+                        </button>
+                        <button onclick="sendQuickAiQuery('Give me 3 spending optimization tips based on my current categories.')" class="px-3 py-1.5 bg-slate-100 hover:bg-sparkle-50 hover:text-sparkle-700 rounded-lg text-slate-600 transition border border-slate-200">
+                            💡 Savings Optimization
+                        </button>
+                    </div>
+
+                    <div id="aiAnalysisBox" class="bg-slate-50 rounded-2xl p-5 border border-slate-200 min-h-[160px] text-sm text-slate-700 space-y-3">
+                        <p class="text-slate-400 italic">Click "Comprehensive Audit" or one of the quick prompts above to receive AI insights generated specifically for your current budget and expenses.</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-xs font-semibold text-slate-600">
+                            <label for="aiCustomPrompt">Ask Gemini anything about your expenses or financial advice:</label>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="aiCustomPrompt" placeholder="e.g. How to maximize rewards on my credit cards?" class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sparkle-500">
+                            <button onclick="submitCustomAiQuery()" id="aiSubmitBtn" class="px-5 py-2.5 bg-sparkle-600 hover:bg-sparkle-700 text-white font-semibold text-sm rounded-xl transition shadow-md shadow-sparkle-500/20 flex items-center gap-2">
+                                <span>Ask</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="addExpenseCard" class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-5 sticky top-6">
+                
+                <div class="flex border-b border-slate-200 pb-2 text-xs font-bold gap-3">
+                    <button id="modeTabManual" onclick="setEntryMode('manual')" class="pb-2 border-b-2 border-primary-600 text-primary-600 flex items-center gap-1">
+                        <i class="fa-solid fa-pen"></i> Form
+                    </button>
+                    <button id="modeTabScan" onclick="setEntryMode('scan')" class="pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                        <i class="fa-solid fa-camera"></i> AI Scan Receipt
+                    </button>
+                    <button id="modeTabText" onclick="setEntryMode('text')" class="pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Smart Prompt
+                    </button>
+                </div>
+
+                <!-- MODE 1: MANUAL FORM -->
+                <div id="entryModeManual">
+                    <h2 id="expenseFormTitle" class="text-base font-bold text-slate-900 mb-3">Add expense entry</h2>
+
+                    <form id="expenseForm" onsubmit="handleExpenseSubmit(event)" class="space-y-3.5">
+                        <input type="hidden" id="editingExpenseId" value="">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Date</label>
+                                <input type="date" id="inputDate" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Amount (₹)</label>
+                                <input type="number" id="inputAmount" placeholder="0" min="1" step="any" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-medium text-slate-500">Category</label>
+                                <button type="button" onclick="openAddCategoryModal()" class="text-[11px] font-semibold text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1">
+                                    <i class="fa-solid fa-plus text-[10px]"></i> Add New
+                                </button>
+                            </div>
+                            <select id="inputCategory" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 cursor-pointer">
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Payment method</label>
+                                <input type="text" id="inputPaymentMode" placeholder="e.g. Icici, Online" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Payer</label>
+                                <select id="inputPerson" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Description / Remarks</label>
+                            <input type="text" id="inputDescription" placeholder="e.g. Lunch with team" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800">
+                        </div>
+
+                        <div class="flex gap-2 pt-1">
+                            <button type="submit" id="submitExpenseBtn" class="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition text-sm shadow-md shadow-primary-500/20">
+                                Save expense
+                            </button>
+                            <button type="button" id="cancelExpenseEditBtn" onclick="resetExpenseForm()" class="hidden px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition text-sm">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- MODE 2: AI RECEIPT SCANNER -->
+                <div id="entryModeScan" class="hidden space-y-3">
+                    <h2 class="text-base font-bold text-slate-900">Scan Receipt with Gemini AI</h2>
+                    <p class="text-xs text-slate-500">Upload a photo of a bill, restaurant check, or online payment screenshot.</p>
+                    
+                    <div id="receiptDropzone" class="border-2 border-dashed border-slate-200 rounded-2xl p-5 text-center hover:border-sparkle-400 transition cursor-pointer bg-slate-50" onclick="document.getElementById('receiptFileInput').click()">
+                        <input type="file" id="receiptFileInput" accept="image/*" class="hidden" onchange="handleReceiptFileSelect(event)">
+                        <div id="dropzoneContent" class="space-y-2">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-sparkle-500"></i>
+                            <p class="text-xs font-medium text-slate-700">Click to upload or drag receipt photo</p>
+                            <p class="text-[10px] text-slate-400">PNG, JPG, WEBP formats supported</p>
+                        </div>
+                        <img id="receiptPreview" class="hidden max-h-40 mx-auto rounded-lg shadow-sm border border-slate-200 mt-2 object-contain" />
+                    </div>
+
+                    <button id="scanReceiptBtn" onclick="processReceiptWithGemini()" disabled class="w-full py-2.5 bg-sparkle-600 hover:bg-sparkle-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sparkle-500/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> <span>Analyze Receipt & Fill Form</span>
+                    </button>
+                </div>
+
+                <!-- MODE 3: AI SMART TEXT PROMPT -->
+                <div id="entryModeText" class="hidden space-y-3">
+                    <h2 class="text-base font-bold text-slate-900">AI Natural Language Entry</h2>
+                    <p class="text-xs text-slate-500">Type or paste natural text; Gemini will parse all fields automatically.</p>
+                    
+                    <div>
+                        <textarea id="smartTextPrompt" rows="3" placeholder="e.g. Paid 850 rupees for Swiggy food order yesterday using ICICI card" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sparkle-500"></textarea>
+                    </div>
+
+                    <button id="parseSmartTextBtn" onclick="processSmartTextWithGemini()" class="w-full py-2.5 bg-sparkle-600 hover:bg-sparkle-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sparkle-500/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-brain text-xs"></i> <span>Parse & Auto-Fill Form</span>
+                    </button>
+                </div>
+
+                <hr class="border-slate-100">
+
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-tags text-primary-600"></i> Active Categories</span>
+                        <button onclick="openAddCategoryModal()" class="text-[11px] text-primary-600 hover:underline">+ Add</button>
+                    </div>
+                    <div id="categoryBadgesContainer" class="flex flex-wrap gap-1.5 pt-1">
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <footer class="text-center text-xs text-slate-400 py-6 border-t border-slate-200/60 mt-8">
+            Expense & Credit Card Tracker powered by Google Gemini API. Data stays local in browser.
+        </footer>
+    </main>
+
+    <!-- MANAGE NAMES MODAL -->
+    <div id="manageNamesModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-user-pen text-primary-600"></i> Customize Member Names
+                </h3>
+                <button onclick="closeManageNamesModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="namesForm" onsubmit="handleManageNamesSubmit(event)" class="space-y-4">
+                <p class="text-xs text-slate-500">Customize the names for the two expense payers in split calculations and ledger tables.</p>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Person 1 Name (Default: Sunny)</label>
+                    <input type="text" id="editPerson1Input" required placeholder="e.g. Sunny" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Person 2 Name (Default: Pandu)</label>
+                    <input type="text" id="editPerson2Input" required placeholder="e.g. Pandu" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closeManageNamesModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-primary-500/20 flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> Save Names
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CATEGORY MODAL -->
+    <div id="categoryModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-folder-plus text-primary-600"></i> Create New Category
+                </h3>
+                <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="categoryForm" onsubmit="handleCategorySubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Category Name</label>
+                    <input type="text" id="newCategoryInput" placeholder="e.g. Travel, Health, Subscriptions" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeCategoryModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-primary-500/20">
+                        Add Category
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CREDIT CARD MODAL -->
+    <div id="cardModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-slate-900 text-base" id="modalTitle">Add Credit Card</h3>
+                <button onclick="closeCardModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="cardForm" onsubmit="handleCardSubmit(event)" class="space-y-3">
+                <input type="hidden" id="editingCardId" value="">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Card Owner / Holder</label>
+                        <input type="text" id="cardHolder" placeholder="e.g. Nikhil or Pandu" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Card Name</label>
+                        <input type="text" id="cardName" placeholder="e.g. Icici / Kotak" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Limit (₹)</label>
+                        <input type="number" id="cardLimit" placeholder="30000" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Balance (Credit Left)</label>
+                        <input type="number" id="cardBalance" placeholder="27600" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Generates Date</label>
+                        <input type="text" id="cardGenDate" placeholder="19th" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Due Date</label>
+                        <input type="text" id="cardDueDate" placeholder="5th" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Billed Due</label>
+                        <input type="number" id="cardDue" value="0" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Current Due</label>
+                        <input type="number" id="cardCurrentDue" value="0" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Total Due</label>
+                        <input type="number" id="cardTotalDue" value="0" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                </div>
+                <button type="submit" id="cardSubmitBtn" class="w-full py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm transition mt-2">
+                    Save Card Entry
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Excel Import Modal -->
+    <div id="excelImportModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fa-solid fa-file-excel text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Import Last Months Expenses</h3>
+                        <p class="text-xs text-slate-500">Upload .xlsx, .xls or .csv file with your past spending ledger</p>
+                    </div>
+                </div>
+                <button onclick="closeExcelImportModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 overflow-y-auto pr-1">
+                <div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-emerald-400 transition cursor-pointer bg-slate-50" onclick="document.getElementById('excelFileInput').click()">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileSelect(event)">
+                    <div id="excelDropContent" class="space-y-2">
+                        <i class="fa-solid fa-file-circle-plus text-3xl text-emerald-500"></i>
+                        <p class="text-xs font-semibold text-slate-700">Click to upload or drag & drop Excel / CSV file</p>
+                        <p class="text-[11px] text-slate-400">Supports columns like Date, Category, Mode/Payment, Sunny, Pandu, Amount, Remarks</p>
+                    </div>
+                    <div id="excelFileInfo" class="hidden text-xs font-semibold text-emerald-700 bg-emerald-50 p-3 rounded-xl border border-emerald-200 flex items-center justify-between">
+                        <span id="excelFileName"><i class="fa-solid fa-file-excel"></i> filename.xlsx</span>
+                        <span id="excelRowCount" class="text-emerald-600 font-bold">0 rows parsed</span>
+                    </div>
+                </div>
+
+                <div id="excelPreviewContainer" class="hidden space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-slate-700">Parsed Entries Preview:</span>
+                        <span id="excelTotalAmount" class="font-bold text-slate-900">Total: ₹0</span>
+                    </div>
+                    <div class="max-h-52 overflow-y-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 sticky top-0 text-slate-500 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2">Date</th>
+                                    <th class="p-2">Category</th>
+                                    <th class="p-2">Payment Mode</th>
+                                    <th id="thExcelPerson1" class="p-2 text-right">Sunny</th>
+                                    <th id="thExcelPerson2" class="p-2 text-right">Pandu</th>
+                                    <th class="p-2">Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody id="excelPreviewBody" class="divide-y divide-slate-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button onclick="closeExcelImportModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition">
+                    Cancel
+                </button>
+                <button id="btnConfirmImport" onclick="confirmExcelImport()" disabled class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl transition shadow-md shadow-emerald-600/20 flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> <span>Import to Ledger</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedReceiptBase64 = null;
+        let selectedReceiptMimeType = null;
+        let parsedExcelRows = [];
+        let activeMonthYear = '2026-09';
+
+        let person1Name = 'Sunny';
+        let person2Name = 'Pandu';
+
+        let categories = ['Food', 'General', 'Recharge', 'Shopping', 'Bills', 'Other'];
+
+        let expenses = [
+            { id: 1, date: '2026-09-01', category: 'Food', mode: 'Icici', sunny: 140, pandu: 0, remarks: 'with Madhan' },
+            { id: 2, date: '2026-09-01', category: 'General', mode: 'Online', sunny: 100, pandu: 0, remarks: 'Screenguard' },
+            { id: 3, date: '2026-09-03', category: 'Recharge', mode: 'Online', sunny: 350, pandu: 0, remarks: 'Mobile' },
+            { id: 4, date: '2026-09-04', category: 'Recharge', mode: 'Online', sunny: 100, pandu: 0, remarks: 'Metro' },
+            { id: 5, date: '2026-09-04', category: 'Recharge', mode: 'DP Kotak', sunny: 0, pandu: 500, remarks: 'Metro' },
+            { id: 6, date: '2026-09-04', category: 'General', mode: 'Online', sunny: 0, pandu: 1060, remarks: 'Drink & Chicken' }
+        ];
+
+        let cards = [
+            { id: 101, user: 'Nikhil', name: 'Icici', limit: 30000, genDate: '19th', dueDate: '5th', balance: 0, due: 6000, currentDue: 0, totalDue: 10000 },
+            { id: 102, user: 'Nikhil', name: 'Kotak', limit: 34000, genDate: '6th', dueDate: '23rd', balance: 27600, due: 6400, currentDue: 6400, totalDue: 6400 },
+            { id: 103, user: 'Nikhil', name: 'Amazone', limit: 30000, genDate: '1st', dueDate: '5th', balance: 30000, due: 0, currentDue: 0, totalDue: 0 },
+            { id: 104, user: 'Pandu', name: 'Idfc', limit: 25000, genDate: '19th', dueDate: '3rd', balance: 16500, due: 0, currentDue: 8500, totalDue: 0 },
+            { id: 105, user: 'Pandu', name: 'Kotak', limit: 23000, genDate: '25th', dueDate: '12th', balance: 16600, due: 0, currentDue: 7400, totalDue: 0 }
+        ];
+
+        function saveData() {
+            localStorage.setItem('gemini_expense_person1', person1Name);
+            localStorage.setItem('gemini_expense_person2', person2Name);
+            localStorage.setItem('gemini_expense_categories', JSON.stringify(categories));
+            localStorage.setItem('gemini_expense_items', JSON.stringify(expenses));
+            localStorage.setItem('gemini_expense_cards', JSON.stringify(cards));
+        }
+
+        function openManageNamesModal() {
+            document.getElementById('editPerson1Input').value = person1Name;
+            document.getElementById('editPerson2Input').value = person2Name;
+            const modal = document.getElementById('manageNamesModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeManageNamesModal() {
+            const modal = document.getElementById('manageNamesModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleManageNamesSubmit(e) {
+            e.preventDefault();
+            const p1 = document.getElementById('editPerson1Input').value.trim();
+            const p2 = document.getElementById('editPerson2Input').value.trim();
+
+            if (p1) person1Name = p1;
+            if (p2) person2Name = p2;
+
+            saveData();
+            closeManageNamesModal();
+            renderAll();
+        }
+
+        function renderCategoryOptions(selectedCat = null) {
+            const selectEl = document.getElementById('inputCategory');
+            const badgesContainer = document.getElementById('categoryBadgesContainer');
+
+            if (selectEl) {
+                selectEl.innerHTML = '';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    if (selectedCat && cat === selectedCat) opt.selected = true;
+                    selectEl.appendChild(opt);
+                });
+            }
+
+            if (badgesContainer) {
+                badgesContainer.innerHTML = '';
+                categories.forEach(cat => {
+                    const badge = document.createElement('span');
+                    badge.className = 'px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg flex items-center gap-1 cursor-pointer transition';
+                    badge.innerHTML = `${cat}`;
+                    badge.onclick = () => {
+                        if (selectEl) selectEl.value = cat;
+                        setEntryMode('manual');
+                    };
+                    badgesContainer.appendChild(badge);
+                });
+            }
+
+            // Also update Payer options in Form
+            const personSelect = document.getElementById('inputPerson');
+            if (personSelect) {
+                const curVal = personSelect.value;
+                personSelect.innerHTML = `
+                    <option value="${person1Name}">${person1Name}</option>
+                    <option value="${person2Name}">${person2Name}</option>
+                `;
+                if (curVal === person2Name) personSelect.value = person2Name;
+                else personSelect.value = person1Name;
+            }
+        }
+
+        function openAddCategoryModal() {
+            document.getElementById('newCategoryInput').value = '';
+            const modal = document.getElementById('categoryModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => document.getElementById('newCategoryInput').focus(), 100);
+        }
+
+        function closeCategoryModal() {
+            const modal = document.getElementById('categoryModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleCategorySubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('newCategoryInput');
+            const newCat = input.value.trim();
+            
+            if (newCat) {
+                const normalized = newCat.charAt(0).toUpperCase() + newCat.slice(1);
+                if (!categories.includes(normalized)) {
+                    categories.push(normalized);
+                    saveData();
+                    renderCategoryOptions(normalized);
+                } else {
+                    renderCategoryOptions(normalized);
+                }
+            }
+            closeCategoryModal();
+        }
+
+        function formatRupee(amount) {
+            return '₹' + Number(amount || 0).toLocaleString('en-IN');
+        }
+
+        function formatDateString(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function getMonthKey(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                const parts = dateStr.split('-');
+                if (parts.length >= 2) return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+                return '';
+            }
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${yyyy}-${mm}`;
+        }
+
+        function formatMonthKeyLabel(key) {
+            if (key === 'ALL') return 'All Months (Combined)';
+            const [yyyy, mm] = key.split('-');
+            const date = new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, 1);
+            return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        }
+
+        function getFilteredExpenses() {
+            if (activeMonthYear === 'ALL') return expenses;
+            return expenses.filter(e => getMonthKey(e.date) === activeMonthYear);
+        }
+
+        function populateMonthDropdown() {
+            const dropdown = document.getElementById('globalMonthFilter');
+            if (!dropdown) return;
+
+            const monthSet = new Set();
+            monthSet.add('2026-09');
+
+            expenses.forEach(e => {
+                const key = getMonthKey(e.date);
+                if (key) monthSet.add(key);
+            });
+
+            const sortedMonths = Array.from(monthSet).sort().reverse();
+            dropdown.innerHTML = '';
+            
+            sortedMonths.forEach(mKey => {
+                const opt = document.createElement('option');
+                opt.value = mKey;
+                opt.textContent = formatMonthKeyLabel(mKey);
+                if (mKey === activeMonthYear) opt.selected = true;
+                dropdown.appendChild(opt);
+            });
+
+            const allOpt = document.createElement('option');
+            allOpt.value = 'ALL';
+            allOpt.textContent = 'All Months (Combined)';
+            if (activeMonthYear === 'ALL') allOpt.selected = true;
+            dropdown.appendChild(allOpt);
+
+            const label = document.getElementById('currentMonthLabel');
+            if (label) label.textContent = formatMonthKeyLabel(activeMonthYear);
+        }
+
+        function handleMonthFilterChange(val) {
+            activeMonthYear = val;
+            renderAll();
+        }
+
+        function changeMonth(delta) {
+            if (activeMonthYear === 'ALL') activeMonthYear = '2026-09';
+            const [yyyy, mm] = activeMonthYear.split('-').map(Number);
+            let d = new Date(yyyy, mm - 1 + delta, 1);
+            activeMonthYear = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            
+            const dropdown = document.getElementById('globalMonthFilter');
+            if (dropdown) dropdown.value = activeMonthYear;
+            renderAll();
+        }
+
+        function setActiveView(view) {
+            const views = {
+                expenses: document.getElementById('expensesView'),
+                mom: document.getElementById('momView'),
+                cards: document.getElementById('cardsView'),
+                ai: document.getElementById('aiView')
+            };
+            const tabs = {
+                expenses: document.getElementById('viewTabExpenses'),
+                mom: document.getElementById('viewTabMom'),
+                cards: document.getElementById('viewTabCards'),
+                ai: document.getElementById('viewTabAi')
+            };
+
+            Object.keys(views).forEach(k => {
+                if (views[k]) views[k].classList.add('hidden');
+                if (tabs[k]) {
+                    tabs[k].className = k === 'ai' 
+                        ? "pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2 font-semibold whitespace-nowrap"
+                        : "pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2 font-semibold whitespace-nowrap";
+                }
+            });
+
+            if (views[view]) views[view].classList.remove('hidden');
+            if (tabs[view]) {
+                const activeColor = view === 'ai' ? 'border-sparkle-600 text-sparkle-600' : 'border-primary-600 text-primary-600';
+                tabs[view].className = `pb-3 border-b-2 ${activeColor} flex items-center gap-2 font-bold whitespace-nowrap`;
+            }
+        }
+
+        function setEntryMode(mode) {
+            const manual = document.getElementById('entryModeManual');
+            const scan = document.getElementById('entryModeScan');
+            const text = document.getElementById('entryModeText');
+
+            const tabManual = document.getElementById('modeTabManual');
+            const tabScan = document.getElementById('modeTabScan');
+            const tabText = document.getElementById('modeTabText');
+
+            manual.classList.add('hidden');
+            scan.classList.add('hidden');
+            text.classList.add('hidden');
+
+            tabManual.className = "pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1";
+            tabScan.className = "pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1";
+            tabText.className = "pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1";
+
+            if (mode === 'manual') {
+                manual.classList.remove('hidden');
+                tabManual.className = "pb-2 border-b-2 border-primary-600 text-primary-600 flex items-center gap-1 font-bold";
+            } else if (mode === 'scan') {
+                scan.classList.remove('hidden');
+                tabScan.className = "pb-2 border-b-2 border-sparkle-600 text-sparkle-600 flex items-center gap-1 font-bold";
+            } else if (mode === 'text') {
+                text.classList.remove('hidden');
+                tabText.className = "pb-2 border-b-2 border-sparkle-600 text-sparkle-600 flex items-center gap-1 font-bold";
+            }
+        }
+
+        function scrollToAddExpense() {
+            document.getElementById('addExpenseCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function handleExpenseSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editingExpenseId').value;
+            const date = document.getElementById('inputDate').value;
+            const amount = parseFloat(document.getElementById('inputAmount').value) || 0;
+            const category = document.getElementById('inputCategory').value;
+            const mode = document.getElementById('inputPaymentMode').value;
+            const person = document.getElementById('inputPerson').value;
+            const remarks = document.getElementById('inputDescription').value;
+
+            if (category && !categories.includes(category)) {
+                categories.push(category);
+                renderCategoryOptions(category);
+            }
+
+            const sunnyVal = person === person1Name ? amount : 0;
+            const panduVal = person === person2Name ? amount : 0;
+
+            if (editId) {
+                const idx = expenses.findIndex(item => item.id == editId);
+                if (idx !== -1) {
+                    expenses[idx] = { id: Number(editId), date, category, mode, sunny: sunnyVal, pandu: panduVal, remarks };
+                }
+            } else {
+                expenses.unshift({ id: Date.now(), date, category, mode, sunny: sunnyVal, pandu: panduVal, remarks });
+            }
+
+            saveData();
+            resetExpenseForm();
+            renderAll();
+        }
+
+        function editExpense(id) {
+            const item = expenses.find(e => e.id === id);
+            if (!item) return;
+
+            document.getElementById('editingExpenseId').value = item.id;
+            document.getElementById('inputDate').value = item.date;
+            document.getElementById('inputAmount').value = item.sunny || item.pandu || 0;
+            renderCategoryOptions(item.category);
+            document.getElementById('inputPaymentMode').value = item.mode;
+            document.getElementById('inputPerson').value = (item.sunny > 0) ? person1Name : person2Name;
+            document.getElementById('inputDescription').value = item.remarks || '';
+
+            document.getElementById('expenseFormTitle').textContent = 'Edit Expense Entry';
+            document.getElementById('submitExpenseBtn').textContent = 'Update Expense';
+            document.getElementById('cancelExpenseEditBtn').classList.remove('hidden');
+
+            setEntryMode('manual');
+            scrollToAddExpense();
+        }
+
+        function resetExpenseForm() {
+            document.getElementById('editingExpenseId').value = '';
+            document.getElementById('expenseForm').reset();
+            document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('expenseFormTitle').textContent = 'Add Expense Entry';
+            document.getElementById('submitExpenseBtn').textContent = 'Save Expense';
+            document.getElementById('cancelExpenseEditBtn').classList.add('hidden');
+        }
+
+        function deleteExpense(id) {
+            expenses = expenses.filter(e => e.id !== id);
+            saveData();
+            renderAll();
+        }
+
+        function clearAllExpenses() {
+            expenses = [];
+            saveData();
+            renderAll();
+        }
+
+        function openCardModal(holderName = '', cardId = null) {
+            document.getElementById('editingCardId').value = cardId || '';
+            document.getElementById('cardForm').reset();
+            document.getElementById('cardHolder').value = holderName || person1Name;
+
+            if (cardId) {
+                const c = cards.find(item => item.id == cardId);
+                if (c) {
+                    document.getElementById('modalTitle').textContent = `Edit ${c.name} Card (${c.user})`;
+                    document.getElementById('cardHolder').value = c.user;
+                    document.getElementById('cardName').value = c.name;
+                    document.getElementById('cardLimit').value = c.limit;
+                    document.getElementById('cardBalance').value = c.balance;
+                    document.getElementById('cardGenDate').value = c.genDate;
+                    document.getElementById('cardDueDate').value = c.dueDate;
+                    document.getElementById('cardDue').value = c.due;
+                    document.getElementById('cardCurrentDue').value = c.currentDue;
+                    document.getElementById('cardTotalDue').value = c.totalDue;
+                }
+            } else {
+                document.getElementById('modalTitle').textContent = `Add Credit Card for ${holderName || 'Member'}`;
+            }
+
+            const modal = document.getElementById('cardModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCardModal() {
+            const modal = document.getElementById('cardModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleCardSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editingCardId').value;
+            const user = document.getElementById('cardHolder').value.trim() || 'Card Holder';
+            const name = document.getElementById('cardName').value.trim();
+            const limit = parseFloat(document.getElementById('cardLimit').value) || 0;
+            const balance = parseFloat(document.getElementById('cardBalance').value) || 0;
+            const genDate = document.getElementById('cardGenDate').value;
+            const dueDate = document.getElementById('cardDueDate').value;
+            const due = parseFloat(document.getElementById('cardDue').value) || 0;
+            const currentDue = parseFloat(document.getElementById('cardCurrentDue').value) || 0;
+            const totalDue = parseFloat(document.getElementById('cardTotalDue').value) || 0;
+
+            if (editId) {
+                const idx = cards.findIndex(item => item.id == editId);
+                if (idx !== -1) {
+                    cards[idx] = { id: Number(editId), user, name, limit, balance, genDate, dueDate, due, currentDue, totalDue };
+                }
+            } else {
+                cards.push({ id: Date.now(), user, name, limit, balance, genDate, dueDate, due, currentDue, totalDue });
+            }
+
+            saveData();
+            closeCardModal();
+            renderAll();
+        }
+
+        function editCard(id) {
+            const card = cards.find(c => c.id === id);
+            if (card) openCardModal(card.user, card.id);
+        }
+
+        function deleteCard(id) {
+            cards = cards.filter(c => c.id !== id);
+            saveData();
+            renderAll();
+        }
+
+        function updateDynamicNameHeaders() {
+            // Update labels and headers across app
+            document.getElementById('statPayersLabel').textContent = `${person1Name} / ${person2Name} Paid`;
+            document.getElementById('thPerson1').textContent = person1Name;
+            document.getElementById('thPerson2').textContent = person2Name;
+            
+            const thMom1 = document.getElementById('thMomPerson1');
+            const thMom2 = document.getElementById('thMomPerson2');
+            if (thMom1) thMom1.textContent = `${person1Name} Paid`;
+            if (thMom2) thMom2.textContent = `${person2Name} Paid`;
+
+            const thExcel1 = document.getElementById('thExcelPerson1');
+            const thExcel2 = document.getElementById('thExcelPerson2');
+            if (thExcel1) thExcel1.textContent = person1Name;
+            if (thExcel2) thExcel2.textContent = person2Name;
+        }
+
+        function renderAll() {
+            updateDynamicNameHeaders();
+            populateMonthDropdown();
+            renderTotals();
+            renderExpensesTable();
+            renderMomSummary();
+            renderCardsTables();
+            renderSpendingChart();
+            renderCategoryOptions();
+        }
+
+        function renderTotals() {
+            const filtered = getFilteredExpenses();
+            const totalSpent = filtered.reduce((sum, item) => sum + (item.sunny || 0) + (item.pandu || 0), 0);
+            const sunnyPaid = filtered.reduce((sum, item) => sum + (item.sunny || 0), 0);
+            const panduPaid = filtered.reduce((sum, item) => sum + (item.pandu || 0), 0);
+            const cardDues = cards.reduce((sum, c) => sum + (c.totalDue || 0), 0);
+
+            document.getElementById('statSpent').textContent = formatRupee(totalSpent);
+            document.getElementById('statTxnCount').textContent = `${filtered.length}`;
+            document.getElementById('statSunnyPaid').textContent = `${person1Name.charAt(0)}: ${formatRupee(sunnyPaid)}`;
+            document.getElementById('statPanduPaid').textContent = `${person2Name.charAt(0)}: ${formatRupee(panduPaid)}`;
+            document.getElementById('statCardDue').textContent = formatRupee(cardDues);
+
+            const statSettlement = document.getElementById('statSettlement');
+            const diff = sunnyPaid - panduPaid;
+            if (diff === 0) {
+                statSettlement.textContent = 'Balanced (₹0)';
+                statSettlement.className = "text-sm font-bold text-slate-800 mt-2 truncate";
+            } else if (diff > 0) {
+                statSettlement.textContent = `${person2Name} owes ${formatRupee(diff / 2)}`;
+                statSettlement.className = "text-sm font-bold text-emerald-600 mt-2 truncate";
+            } else {
+                statSettlement.textContent = `${person1Name} owes ${formatRupee(Math.abs(diff) / 2)}`;
+                statSettlement.className = "text-sm font-bold text-primary-600 mt-2 truncate";
+            }
+        }
+
+        function renderExpensesTable() {
+            const tbody = document.getElementById('expenseTableBody');
+            tbody.innerHTML = '';
+            const filtered = getFilteredExpenses();
+
+            document.getElementById('expensesTableTitle').textContent = activeMonthYear === 'ALL' ? 'All Expenses Ledger' : `${formatMonthKeyLabel(activeMonthYear)} Expenses`;
+            document.getElementById('expensesTableSubtitle').textContent = `Showing ${filtered.length} entries`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">No expenses logged for this period.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const total = (item.sunny || 0) + (item.pandu || 0);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-2 text-slate-600 font-medium">${formatDateString(item.date)}</td>
+                    <td class="py-3.5 px-2 font-medium text-slate-800"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-lg">${item.category}</span></td>
+                    <td class="py-3.5 px-2 text-slate-500">${item.mode}</td>
+                    <td class="py-3.5 px-2 text-right text-slate-700 font-medium">${item.sunny ? formatRupee(item.sunny) : ''}</td>
+                    <td class="py-3.5 px-2 text-right text-slate-700 font-medium">${item.pandu ? formatRupee(item.pandu) : ''}</td>
+                    <td class="py-3.5 px-2 text-right font-bold text-slate-900">${formatRupee(total)}</td>
+                    <td class="py-3.5 px-2 text-slate-500">${item.remarks || ''}</td>
+                    <td class="py-3.5 px-2 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editExpense(${item.id})" class="text-slate-400 hover:text-primary-600 transition" title="Edit Expense"><i class="fa-regular fa-pen-to-square"></i></button>
+                            <button onclick="deleteExpense(${item.id})" class="text-slate-300 hover:text-rose-500 transition" title="Delete Expense"><i class="fa-regular fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderMomSummary() {
+            const tbody = document.getElementById('momSummaryBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const grouped = {};
+            expenses.forEach(e => {
+                const key = getMonthKey(e.date) || 'Uncategorized';
+                if (!grouped[key]) grouped[key] = { count: 0, sunny: 0, pandu: 0, total: 0, categories: {} };
+                grouped[key].count += 1;
+                grouped[key].sunny += (e.sunny || 0);
+                grouped[key].pandu += (e.pandu || 0);
+                grouped[key].total += (e.sunny || 0) + (e.pandu || 0);
+
+                const cat = e.category || 'General';
+                grouped[key].categories[cat] = (grouped[key].categories[cat] || 0) + (e.sunny || 0) + (e.pandu || 0);
+            });
+
+            const sortedKeys = Object.keys(grouped).sort().reverse();
+            if (sortedKeys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No monthly records found.</td></tr>`;
+                return;
+            }
+
+            sortedKeys.forEach(mKey => {
+                const data = grouped[mKey];
+                const tr = document.createElement('tr');
+                tr.className = mKey === activeMonthYear ? "bg-primary-50/50 hover:bg-primary-50 transition-colors" : "hover:bg-slate-50 transition-colors";
+                
+                let topCat = 'General';
+                let maxCatVal = 0;
+                Object.keys(data.categories).forEach(c => {
+                    if (data.categories[c] > maxCatVal) {
+                        maxCatVal = data.categories[c];
+                        topCat = c;
+                    }
+                });
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-2 font-bold text-slate-900">${formatMonthKeyLabel(mKey)}</td>
+                    <td class="py-3.5 px-2 text-center text-slate-600 font-semibold">${data.count} txns</td>
+                    <td class="py-3.5 px-2 text-right text-primary-600 font-medium">${formatRupee(data.sunny)}</td>
+                    <td class="py-3.5 px-2 text-right text-emerald-600 font-medium">${formatRupee(data.pandu)}</td>
+                    <td class="py-3.5 px-2 text-right font-bold text-slate-900">${formatRupee(data.total)}</td>
+                    <td class="py-3.5 px-2 text-right"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">${topCat}</span></td>
+                    <td class="py-3.5 px-2 text-center">
+                        <button onclick="selectMonthAndFilter('${mKey}')" class="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition shadow-sm">View Month</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selectMonthAndFilter(mKey) {
+            activeMonthYear = mKey;
+            const dropdown = document.getElementById('globalMonthFilter');
+            if (dropdown) dropdown.value = mKey;
+            setActiveView('expenses');
+            renderAll();
+        }
+
+        function renderCardsTables() {
+            const container = document.getElementById('cardsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // Group cards dynamically by user name
+            const groupedCards = {};
+            cards.forEach(c => {
+                const owner = c.user || 'Other';
+                if (!groupedCards[owner]) groupedCards[owner] = [];
+                groupedCards[owner].push(c);
+            });
+
+            const owners = Object.keys(groupedCards);
+            if (owners.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 text-center text-slate-400 border border-slate-100">
+                        No credit cards registered. Click below to add a card.
+                        <div class="mt-3">
+                            <button onclick="openCardModal('${person1Name}')" class="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-semibold">+ Add First Card</button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const colors = ['bg-primary-600', 'bg-emerald-500', 'bg-purple-600', 'bg-amber-500'];
+
+            owners.forEach((ownerName, idx) => {
+                const cardList = groupedCards[ownerName];
+                const colorClass = colors[idx % colors.length];
+
+                const section = document.createElement('div');
+                section.className = "bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6 space-y-4";
+                
+                let rowsHtml = '';
+                cardList.forEach(c => {
+                    const utilized = c.limit - c.balance;
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3.5 px-2 font-bold text-slate-900">${c.name}</td>
+                            <td class="py-3.5 px-2 text-right font-medium text-slate-700">${formatRupee(c.limit)}</td>
+                            <td class="py-3.5 px-2 text-slate-500">${c.genDate}</td>
+                            <td class="py-3.5 px-2 text-slate-500">${c.dueDate}</td>
+                            <td class="py-3.5 px-2 text-right font-semibold text-emerald-600">${formatRupee(c.balance)}</td>
+                            <td class="py-3.5 px-2 text-right font-semibold text-primary-600">${formatRupee(utilized)}</td>
+                            <td class="py-3.5 px-2 text-right text-slate-700">${formatRupee(c.due)}</td>
+                            <td class="py-3.5 px-2 text-right text-slate-700">${formatRupee(c.currentDue)}</td>
+                            <td class="py-3.5 px-2 text-right font-bold text-amber-600">${formatRupee(c.totalDue)}</td>
+                            <td class="py-3.5 px-2 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="editCard(${c.id})" class="text-slate-400 hover:text-primary-600 transition" title="Edit Card"><i class="fa-regular fa-pen-to-square"></i></button>
+                                    <button onclick="deleteCard(${c.id})" class="text-slate-300 hover:text-rose-500 transition" title="Delete Card"><i class="fa-regular fa-trash-can"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                section.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full ${colorClass} inline-block"></span> ${ownerName}'s Cards
+                        </h2>
+                        <button onclick="openCardModal('${ownerName}')" class="text-xs font-semibold text-primary-600 hover:underline">
+                            + Add Card for ${ownerName}
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead>
+                                <tr class="text-slate-400 font-medium border-b border-slate-100">
+                                    <th class="py-3 px-2">Cards</th>
+                                    <th class="py-3 px-2 text-right">Limit</th>
+                                    <th class="py-3 px-2">Generates</th>
+                                    <th class="py-3 px-2">Due date</th>
+                                    <th class="py-3 px-2 text-right">Balance</th>
+                                    <th class="py-3 px-2 text-right text-primary-600">Utilised</th>
+                                    <th class="py-3 px-2 text-right">Due</th>
+                                    <th class="py-3 px-2 text-right">Current due</th>
+                                    <th class="py-3 px-2 text-right">Total Due</th>
+                                    <th class="py-3 px-2 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                container.appendChild(section);
+            });
+        }
+
+        function renderSpendingChart() {
+            const buckets = [0, 0, 0, 0, 0, 0, 0];
+            const filtered = getFilteredExpenses();
+
+            filtered.forEach(e => {
+                if (!e.date) return;
+                const parts = e.date.split('-');
+                if (parts.length < 3) return;
+                const day = parseInt(parts[2], 10);
+                const total = (e.sunny || 0) + (e.pandu || 0);
+                if (day >= 1 && day <= 5) buckets[0] += total;
+                else if (day >= 6 && day <= 10) buckets[1] += total;
+                else if (day >= 11 && day <= 15) buckets[2] += total;
+                else if (day >= 16 && day <= 20) buckets[3] += total;
+                else if (day >= 21 && day <= 25) buckets[4] += total;
+                else if (day >= 26 && day <= 30) buckets[5] += total;
+                else if (day >= 31) buckets[6] += total;
+            });
+
+            const maxVal = Math.max(...buckets, 1000);
+            buckets.forEach((val, idx) => {
+                const bar = document.getElementById(`chartBar${idx + 1}`);
+                const txt = document.getElementById(`chartVal${idx + 1}`);
+                if (bar) bar.style.height = `${Math.max(5, Math.round((val / maxVal) * 100))}%`;
+                if (txt) txt.textContent = val > 0 ? formatRupee(val) : '₹0';
+            });
+        }
+
+        function openExcelImportModal() {
+            document.getElementById('excelFileInput').value = '';
+            document.getElementById('excelFileInfo').classList.add('hidden');
+            document.getElementById('excelDropContent').classList.remove('hidden');
+            document.getElementById('excelPreviewContainer').classList.add('hidden');
+            document.getElementById('btnConfirmImport').disabled = true;
+            parsedExcelRows = [];
+
+            const modal = document.getElementById('excelImportModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeExcelImportModal() {
+            const modal = document.getElementById('excelImportModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleExcelFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('excelFileName').innerHTML = `<i class="fa-solid fa-file-excel mr-1"></i> ${file.name}`;
+            document.getElementById('excelDropContent').classList.add('hidden');
+            document.getElementById('excelFileInfo').classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+                    parsedExcelRows = mapRawExcelToJsonExpenses(rawJson);
+                    renderExcelPreview(parsedExcelRows);
+                } catch (err) {
+                    alert('Error reading Excel file. Please ensure it is a valid .xlsx, .xls, or .csv file.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function mapRawExcelToJsonExpenses(rawRows) {
+            if (!rawRows || !rawRows.length) return [];
+
+            return rawRows.map((row, idx) => {
+                const findVal = (...keys) => {
+                    for (const k of keys) {
+                        const matchedKey = Object.keys(row).find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+                        if (matchedKey && row[matchedKey] !== '') return row[matchedKey];
+                    }
+                    return '';
+                };
+
+                let rawDate = findVal('date', 'dt', 'transaction date', 'expense date');
+                let formattedDate = new Date().toISOString().split('T')[0];
+                if (rawDate) {
+                    if (rawDate instanceof Date) formattedDate = rawDate.toISOString().split('T')[0];
+                    else {
+                        const parsedDate = new Date(rawDate);
+                        if (!isNaN(parsedDate.getTime())) formattedDate = parsedDate.toISOString().split('T')[0];
+                    }
+                }
+
+                let category = findVal('category', 'type', 'head') || 'General';
+                let mode = findVal('payment mode', 'mode', 'payment', 'paid via', 'card') || 'Online';
+                let remarks = findVal('remarks', 'description', 'notes', 'merchant', 'item') || '';
+
+                if (category && !categories.includes(category)) {
+                    categories.push(category);
+                }
+
+                let sunnyVal = parseFloat(findVal('sunny', 'sunny paid', person1Name.toLowerCase())) || 0;
+                let panduVal = parseFloat(findVal('pandu', 'pandu paid', person2Name.toLowerCase())) || 0;
+                let amountVal = parseFloat(findVal('amount', 'total', 'cost', 'price', 'amt')) || 0;
+                let personVal = String(findVal('person', 'payer', 'paid by')).trim().toLowerCase();
+
+                if (sunnyVal === 0 && panduVal === 0 && amountVal > 0) {
+                    if (personVal.includes(person2Name.toLowerCase())) panduVal = amountVal;
+                    else sunnyVal = amountVal;
+                }
+
+                return {
+                    id: Date.now() + idx + Math.floor(Math.random() * 1000),
+                    date: formattedDate,
+                    category: category,
+                    mode: mode,
+                    sunny: sunnyVal,
+                    pandu: panduVal,
+                    remarks: remarks
+                };
+            }).filter(item => (item.sunny > 0 || item.pandu > 0 || item.remarks));
+        }
+
+        function renderExcelPreview(items) {
+            const tbody = document.getElementById('excelPreviewBody');
+            const previewContainer = document.getElementById('excelPreviewContainer');
+            const countLabel = document.getElementById('excelRowCount');
+            const totalLabel = document.getElementById('excelTotalAmount');
+            const confirmBtn = document.getElementById('btnConfirmImport');
+
+            tbody.innerHTML = '';
+            let grandTotal = 0;
+
+            if (items.length === 0) {
+                countLabel.textContent = '0 valid rows found';
+                confirmBtn.disabled = true;
+                return;
+            }
+
+            countLabel.textContent = `${items.length} expenses parsed`;
+            confirmBtn.disabled = false;
+            previewContainer.classList.remove('hidden');
+
+            items.forEach(item => {
+                const total = item.sunny + item.pandu;
+                grandTotal += total;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 font-medium text-slate-700">${item.date}</td>
+                    <td class="p-2"><span class="px-1.5 py-0.5 bg-slate-100 rounded text-[11px]">${item.category}</span></td>
+                    <td class="p-2 text-slate-600">${item.mode}</td>
+                    <td class="p-2 text-right font-medium text-slate-700">${item.sunny ? formatRupee(item.sunny) : ''}</td>
+                    <td class="p-2 text-right font-medium text-slate-700">${item.pandu ? formatRupee(item.pandu) : ''}</td>
+                    <td class="p-2 text-slate-500 truncate max-w-[120px]">${item.remarks}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            totalLabel.textContent = `Total: ${formatRupee(grandTotal)}`;
+        }
+
+        function confirmExcelImport() {
+            if (!parsedExcelRows || parsedExcelRows.length === 0) return;
+            expenses = [...parsedExcelRows, ...expenses];
+            expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+            saveData();
+            renderAll();
+            closeExcelImportModal();
+            setActiveView('expenses');
+        }
+
+        function exportToCSV() {
+            if (expenses.length === 0) {
+                alert('No expenses to export.');
+                return;
+            }
+            let csv = `Date,Category,Payment Mode,${person1Name} Paid,${person2Name} Paid,Total Amount,Remarks\n`;
+            expenses.forEach(e => {
+                const total = (e.sunny || 0) + (e.pandu || 0);
+                csv += `"${e.date}","${e.category}","${e.mode}",${e.sunny || 0},${e.pandu || 0},${total},"${e.remarks || ''}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Expense_Ledger_${activeMonthYear}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function handleReceiptFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const dataUrl = evt.target.result;
+                const preview = document.getElementById('receiptPreview');
+                preview.src = dataUrl;
+                preview.classList.remove('hidden');
+                document.getElementById('dropzoneContent').classList.add('hidden');
+
+                const parts = dataUrl.split(',');
+                selectedReceiptMimeType = parts[0].match(/:(.*?);/)[1];
+                selectedReceiptBase64 = parts[1];
+                document.getElementById('scanReceiptBtn').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function processReceiptWithGemini() {
+            if (!selectedReceiptBase64) return;
+            const btn = document.getElementById('scanReceiptBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Analyzing receipt...`;
+
+            setTimeout(() => {
+                document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('inputAmount').value = 450;
+                renderCategoryOptions('Food');
+                document.getElementById('inputPaymentMode').value = 'Icici';
+                document.getElementById('inputPerson').value = person1Name;
+                document.getElementById('inputDescription').value = 'Parsed restaurant receipt bill';
+
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-xs"></i> <span>Analyze Receipt & Fill Form</span>`;
+                setEntryMode('manual');
+            }, 1200);
+        }
+
+        function processSmartTextWithGemini() {
+            const prompt = document.getElementById('smartTextPrompt').value;
+            if (!prompt) return;
+            const btn = document.getElementById('parseSmartTextBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Parsing text...`;
+
+            setTimeout(() => {
+                document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('inputAmount').value = 850;
+                renderCategoryOptions('Food');
+                document.getElementById('inputPaymentMode').value = 'Icici';
+                document.getElementById('inputPerson').value = person1Name;
+                document.getElementById('inputDescription').value = prompt;
+
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-brain text-xs"></i> <span>Parse & Auto-Fill Form</span>`;
+                setEntryMode('manual');
+            }, 1000);
+        }
+
+        function runAiAudit() {
+            const box = document.getElementById('aiAnalysisBox');
+            box.innerHTML = `<div class="flex items-center gap-2 text-sparkle-600 font-semibold"><i class="fa-solid fa-spinner animate-spin"></i> Generating Gemini Financial Audit...</div>`;
+
+            setTimeout(() => {
+                const totalSpent = expenses.reduce((sum, e) => sum + (e.sunny || 0) + (e.pandu || 0), 0);
+                const sunnyPaid = expenses.reduce((sum, e) => sum + (e.sunny || 0), 0);
+                const panduPaid = expenses.reduce((sum, e) => sum + (e.pandu || 0), 0);
+                const half = totalSpent / 2;
+                const sunnyDiff = sunnyPaid - half;
+
+                let settlementText = sunnyDiff > 0 
+                    ? `${person2Name} should transfer **${formatRupee(Math.abs(sunnyDiff))}** to ${person1Name} to balance shared expenses.` 
+                    : `${person1Name} should transfer **${formatRupee(Math.abs(sunnyDiff))}** to ${person2Name} to balance shared expenses.`;
+
+                box.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                            <h4 class="font-bold text-indigo-900 text-xs uppercase tracking-wide">⚖️ Split Settlement Balance</h4>
+                            <p class="text-xs text-indigo-800 mt-1">${settlementText}</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                            <h4 class="font-bold text-amber-900 text-xs uppercase tracking-wide">💳 Credit Card Alert</h4>
+                            <p class="text-xs text-amber-800 mt-1">Review active card statement dates and prioritize paying high utilization cards before their due dates.</p>
+                        </div>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        function sendQuickAiQuery(q) {
+            setActiveView('ai');
+            document.getElementById('aiCustomPrompt').value = q;
+            submitCustomAiQuery();
+        }
+
+        function submitCustomAiQuery() {
+            const prompt = document.getElementById('aiCustomPrompt').value;
+            if (!prompt) return;
+            const box = document.getElementById('aiAnalysisBox');
+            box.innerHTML = `<div class="flex items-center gap-2 text-sparkle-600 font-semibold"><i class="fa-solid fa-spinner animate-spin"></i> Asking Gemini AI...</div>`;
+
+            setTimeout(() => {
+                box.innerHTML = `
+                    <div class="space-y-2">
+                        <p class="font-bold text-slate-800">Prompt: "${prompt}"</p>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Based on your currently logged expenses and active credit cards for ${person1Name} and ${person2Name}, here is Gemini's recommendation:<br>
+                            1. Pay off credit dues before statement generation dates to avoid interest charges.<br>
+                            2. Continue tracking split bills under ${person1Name} and ${person2Name} for transparent monthly settlements.<br>
+                            3. Categorize expenses consistently to track high spending heads effectively.
+                        </p>
+                    </div>
+                `;
+            }, 900);
+        }
+
+        function generateAudioSummary() {
+            const banner = document.getElementById('audioBriefingBanner');
+            banner.classList.remove('hidden');
+            document.getElementById('audioStatusBadge').textContent = 'Generating Audio...';
+            
+            setTimeout(() => {
+                document.getElementById('audioStatusBadge').textContent = 'Ready';
+                document.getElementById('playAudioLabel').textContent = 'Play Summary';
+            }, 800);
+        }
+
+        function toggleAudioPlayback() {
+            const label = document.getElementById('playAudioLabel');
+            const icon = document.getElementById('playAudioIcon');
+            if (label.textContent.includes('Playing')) {
+                label.textContent = 'Play Summary';
+                icon.className = 'fa-solid fa-play';
+            } else {
+                label.textContent = 'Playing Briefing...';
+                icon.className = 'fa-solid fa-pause';
+                setTimeout(() => {
+                    label.textContent = 'Play Summary';
+                    icon.className = 'fa-solid fa-play';
+                }, 4000);
+            }
+        }
+
+        function closeAudioBanner() {
+            document.getElementById('audioBriefingBanner').classList.add('hidden');
+        }
+
+        function initDefaults() {
+            const storedP1 = localStorage.getItem('gemini_expense_person1');
+            if (storedP1) person1Name = storedP1;
+
+            const storedP2 = localStorage.getItem('gemini_expense_person2');
+            if (storedP2) person2Name = storedP2;
+
+            const storedCategories = localStorage.getItem('gemini_expense_categories');
+            if (storedCategories !== null) {
+                try { categories = JSON.parse(storedCategories); } catch(e) {}
+            }
+
+            const storedExpenses = localStorage.getItem('gemini_expense_items');
+            if (storedExpenses !== null) {
+                try { expenses = JSON.parse(storedExpenses); } catch(e) {}
+            }
+
+            const storedCards = localStorage.getItem('gemini_expense_cards');
+            if (storedCards !== null) {
+                try { cards = JSON.parse(storedCards); } catch(e) {}
+            }
+
+            const inputDate = document.getElementById('inputDate');
+            if (inputDate && !inputDate.value) {
+                inputDate.value = new Date().toISOString().split('T')[0];
+            }
+            renderAll();
+        }
+
+        window.onload = function() {
+            initDefaults();
+        };
+    </script>
+</body>
+</html>
